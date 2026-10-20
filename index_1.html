@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Free, plain-language guide and calculator for AI costs. Learn what tokens are, see how your bill builds up, cut it with caching, smaller models and batching, and find ways to stop running out of credits.">
+<meta property="og:title" content="AI Token Saver by MadeToScale">
+<meta property="og:description" content="Understand your AI bill in 5 minutes, then cut it. Free interactive tool in English and Hindi.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>AI Token Saver</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap">
+<style>
+/* Layout: a guided, scrolling lesson (token → meter → long chats → hacks → credits), with the full calculator folded underneath for power users. */
+:root{
+  --bg:#F4F5F7; --panel:#FFFFFF; --ink:#14161C; --muted:#646a77; --line:#E1E4EA; --soft:#EEF0F4;
+  --accent:#FF5A1F; --accent-ink:#FFFFFF; --good:#0E9F6E; --good-soft:#E3F6EE; --bad:#D9363E; --bad-soft:#FCE9EA;
+  --in:#4C6FFF; --hist:#9B6BFF; --cache:#0E9F6E; --out:#FF5A1F; --think:#E8A317;
+  --t1:#DCE4FF; --t2:#FFE3D6; --t3:#E1F5EC; --t4:#F3E6FF; --t5:#FFF2CC;
+  --display:'Instrument Serif',Georgia,serif; --body:'Geist','Noto Sans Devanagari',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'Geist Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B0C10; --panel:#14161C; --ink:#ECEDEF; --muted:#9AA0AC; --line:#272B34; --soft:#1B1E25;
+  --accent:#FF6A33; --accent-ink:#0B0C10; --good:#34D399; --good-soft:#0F2A21; --bad:#F87171; --bad-soft:#2E1517;
+  --in:#7C93FF; --hist:#B194FF; --cache:#34D399; --out:#FF6A33; --think:#F5B83D;
+  --t1:#232B4A; --t2:#4A2A1C; --t3:#173A2C; --t4:#35244A; --t5:#4A3C14; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B0C10; --panel:#14161C; --ink:#ECEDEF; --muted:#9AA0AC; --line:#272B34; --soft:#1B1E25;
+  --accent:#FF6A33; --accent-ink:#0B0C10; --good:#34D399; --good-soft:#0F2A21; --bad:#F87171; --bad-soft:#2E1517;
+  --in:#7C93FF; --hist:#B194FF; --cache:#34D399; --out:#FF6A33; --think:#F5B83D;
+  --t1:#232B4A; --t2:#4A2A1C; --t3:#173A2C; --t4:#35244A; --t5:#4A3C14; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px 60px}
+h1,h2,h3{text-wrap:balance;margin:0}
+.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2em;font-size:12px}
+.tile{width:28px;height:28px;border-radius:7px;background:var(--accent);display:grid;place-items:center}
+.ctrls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:3px}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 13px var(--body);padding:7px 12px;border-radius:7px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.rate{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.rate input[type=number]{width:80px;margin-top:0}
+.hero{margin:34px 0 10px;max-width:760px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,7vw,72px);line-height:.98}
+h1 em{color:var(--accent);font-style:italic}
+.lede{color:var(--muted);max-width:62ch;margin-top:14px;font-size:17px}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 10px}
+.steps a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 14px 8px 8px;font-size:13.5px;font-weight:500}
+.steps a i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--bg);font:600 11px var(--mono);font-style:normal}
+.lesson{display:grid;gap:22px;margin-top:28px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,3vw,28px)}
+.card>.eyebrow{color:var(--accent)}
+.card h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,4vw,40px);line-height:1.05;margin-top:6px}
+.card .say{color:var(--muted);font-size:16px;max-width:66ch;margin-top:10px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;margin-top:20px;align-items:start}
+@media (max-width:820px){.split{grid-template-columns:1fr}}
+.panel{background:var(--soft);border-radius:14px;padding:16px;min-width:0}
+.f label{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:600}
+.f label span{font-weight:500;color:var(--muted);font-family:var(--mono)}
+.f .hint{font-size:12px;color:var(--muted);margin-top:3px}
+.fields{display:grid;gap:14px;margin-top:14px}
+input[type=number],select,textarea{width:100%;font:500 14px var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:6px}
+input[type=number]{font-family:var(--mono)}
+input[type=range]{width:100%;accent-color:var(--accent);margin-top:8px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea{min-height:120px;resize:vertical;line-height:1.5}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel);color:var(--ink);font:500 13.5px var(--body);padding:7px 13px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+/* token chips */
+.tokens{display:flex;flex-wrap:wrap;gap:4px;line-height:1;min-height:60px;font-family:var(--mono);font-size:14px}
+.tokens span{padding:5px 6px;border-radius:5px;background:var(--t1)}
+.tokens span:nth-child(5n+2){background:var(--t2)}.tokens span:nth-child(5n+3){background:var(--t3)}.tokens span:nth-child(5n+4){background:var(--t4)}.tokens span:nth-child(5n){background:var(--t5)}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.kv div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.kv b{display:block;font-family:var(--mono);font-size:22px;font-weight:600;line-height:1.1}
+.kv span{font-size:12px;color:var(--muted)}
+.kv .big{grid-column:1/-1}.kv .big b{color:var(--accent);font-size:30px}
+/* receipt */
+.receipt{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;font-family:var(--mono);font-size:14px}
+.receipt .rl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.receipt .rl small{display:block;color:var(--muted);font-family:var(--body);font-size:12px}
+.receipt .rl.total{border:0;font-weight:600;font-size:18px;padding-top:12px}
+.receipt .rl .amt{text-align:right}
+.track{height:18px;border-radius:6px;background:var(--soft);display:flex;overflow:hidden;margin-top:10px}
+.track span{height:100%;display:block;transition:width .3s ease}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.callout{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--good-soft);color:var(--good);font-weight:500;font-size:14px}
+.callout.warn{background:var(--bad-soft);color:var(--bad)}
+/* stack viz */
+.stack-viz{display:grid;gap:6px;margin-top:12px}
+.srow{display:grid;grid-template-columns:70px minmax(0,1fr) 84px;gap:10px;align-items:center;font-size:12.5px}
+.srow .t{color:var(--muted);font-family:var(--mono)}
+.srow .amt{font-family:var(--mono);text-align:right}
+.srow .bar{height:16px;display:flex;border-radius:4px;overflow:hidden;background:var(--soft)}
+.srow .bar span{height:100%;display:block}
+/* hacks */
+.hacks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+@media (max-width:820px){.hacks{grid-template-columns:1fr}}
+.hack{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--panel);display:grid;gap:8px;align-content:start;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.hack[aria-pressed="true"]{border-color:var(--good);box-shadow:inset 0 0 0 1px var(--good)}
+.hack .hd{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hack h3{font-size:16px;font-weight:600}
+.hack p{margin:0;color:var(--muted);font-size:13.5px}
+.hack .sv{font-family:var(--mono);font-weight:600;color:var(--good);font-size:13px}
+.sw{position:relative;width:42px;height:24px;flex:none}
+.sw i{position:absolute;inset:0;border-radius:999px;background:var(--line);transition:background .15s}
+.sw i::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.hack[aria-pressed="true"] .sw i{background:var(--good)}
+.hack[aria-pressed="true"] .sw i::after{transform:translateX(18px)}
+.sw.real input{opacity:0;width:100%;height:100%;margin:0;position:absolute;inset:0;cursor:pointer;z-index:1}
+.sw.real input:checked+i{background:var(--good)}.sw.real input:checked+i::after{transform:translateX(18px)}
+.sw.real input:focus-visible+i{outline:2px solid var(--accent);outline-offset:2px}
+.compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+@media (max-width:640px){.compare{grid-template-columns:1fr}}
+.stat{border-radius:14px;padding:16px;border:1px solid var(--line);background:var(--soft)}
+.stat .v{font-family:var(--mono);font-size:clamp(24px,3.4vw,34px);font-weight:600;letter-spacing:-.02em;margin-top:6px;line-height:1.1}
+.stat .s{font-size:12px;color:var(--muted);margin-top:4px}
+.stat.save{background:var(--good-soft);border-color:transparent}.stat.save .v{color:var(--good)}
+.scen{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;font-size:13.5px;color:var(--muted)}
+.scen select{width:auto;margin:0;padding:6px 10px}
+/* credits */
+.ways{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+@media (max-width:820px){.ways{grid-template-columns:1fr}}
+.way{border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:8px;align-content:start}
+.way .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.way h3{font-size:17px;font-weight:600}
+.way .tag{font-size:11px;font-weight:600;letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.way .tag.free{background:var(--good-soft);color:var(--good)}
+.way p{margin:0;color:var(--muted);font-size:13.5px}
+.way dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:4px 0 0;font-size:13px}
+.way dt{color:var(--muted);font-weight:600}.way dd{margin:0}
+.way details{border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
+.way summary{cursor:pointer;font-weight:600;font-size:13px}
+.way pre{background:var(--soft);border-radius:10px;padding:10px;font-family:var(--mono);font-size:12.5px;overflow-x:auto;margin:8px 0 0;white-space:pre}
+.way a{color:var(--ink)}
+.picker{margin-top:22px;border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--soft)}
+.picker h3{font-size:17px;font-weight:600}
+.q{margin-top:14px}
+.q .ql{font-size:13.5px;font-weight:600;margin-bottom:8px}
+.verdict{margin-top:16px;padding:14px 16px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.verdict b{display:block;font-size:16px}
+.verdict p{margin:4px 0 0;color:var(--muted);font-size:14px}
+/* quiz */
+.quiz{display:grid;gap:12px;margin-top:18px}
+.qq{border:1px solid var(--line);border-radius:14px;padding:16px}
+.qq .qt{font-weight:600;font-size:15.5px}
+.qq .opts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.qq .opts button{border:1px solid var(--line);background:var(--panel);color:var(--ink);font:500 14px var(--mono);padding:8px 14px;border-radius:10px;cursor:pointer}
+.qq .opts button.right{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.qq .opts button.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.qq .ans{margin:10px 0 0;font-size:13.5px;color:var(--muted)}
+/* glossary */
+.gloss{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:18px}
+.gl{border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;background:var(--panel);text-align:left;font:inherit;color:inherit;display:grid;gap:6px;align-content:start}
+.gl b{font-size:15px}.gl span{font-size:13px;color:var(--muted)}
+.gl[aria-expanded="false"] span{display:none}
+.gl[aria-expanded="false"]::after{content:"Tap to see";font-size:12px;color:var(--accent)}
+/* advanced */
+details.adv{border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:0}
+details.adv>summary{list-style:none;cursor:pointer;padding:22px clamp(18px,3vw,28px);display:flex;justify-content:space-between;align-items:center;gap:14px}
+details.adv>summary::-webkit-details-marker{display:none}
+details.adv>summary h2{font-family:var(--display);font-weight:400;font-size:clamp(26px,3.5vw,34px)}
+details.adv>summary .say{margin-top:4px}
+details.adv>summary .btn{flex:none}
+details.adv[open]>summary .btn{display:none}
+.advbody{padding:0 clamp(18px,3vw,28px) clamp(18px,3vw,28px)}
+.grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.pnl{background:var(--soft);border-radius:16px;padding:18px;min-width:0}
+.pnl h2{font-size:17px;font-weight:600;font-family:var(--body)}
+.pnl .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sep{height:1px;background:var(--line);margin:18px 0 4px}
+.tog{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 0}
+.tog b{font-size:14px;font-weight:600;display:block}.tog small{color:var(--muted);font-size:12px;display:block;margin-top:2px}
+.sub-opt{padding:0 0 8px 0;display:grid;gap:10px}
+.bars{display:grid;gap:12px;margin-top:18px}
+.bar-row{display:grid;grid-template-columns:84px minmax(0,1fr) 92px;gap:10px;align-items:center;font-size:13px}
+.bar-row .t{font-weight:600}.bar-row .amt{font-family:var(--mono);text-align:right}
+.recs{display:grid;gap:10px;margin-top:14px}
+.rec{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.rec h3{font-size:15px;font-weight:600}.rec p{margin:2px 0 0;color:var(--muted);font-size:13px;grid-column:1}
+.rec .gain{font-family:var(--mono);font-weight:600;color:var(--good);text-align:right;white-space:nowrap}
+.rec .gain small{display:block;color:var(--muted);font-weight:500;font-size:11px}
+.rec.done{opacity:.55}
+.pill{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:var(--good-soft);color:var(--good);margin-left:6px;vertical-align:2px}
+.btn{border:0;background:var(--accent);color:var(--accent-ink);font:600 14px var(--body);padding:10px 16px;border-radius:10px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.row-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.tablewrap{overflow-x:auto;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid var(--line)}
+td.num,th.num{text-align:right}
+tr.best td{background:var(--good-soft)}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.vendor{font-size:11px;color:var(--muted);display:block}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+.cta{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;background:var(--ink);color:var(--bg);border-radius:18px;padding:24px}
+.cta h2{font-family:var(--display);font-weight:400;font-size:30px}
+.cta p{margin:4px 0 0;opacity:.75;font-size:14px}
+.cta code{font-family:var(--mono);background:rgba(127,127,127,.18);padding:6px 10px;border-radius:8px;user-select:all}
+footer{margin-top:28px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+footer a{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.track span,.sw i,.sw i::after{transition:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="brand"><span class="tile"><svg viewBox="0 0 667 587" width="17" aria-hidden="true"><path d="M0,587 L90,587 L303,374 L303,587 L311,587 L533,337 L533,587 L667,587 L667,0 L335,339 L335,145 L0,475Z" fill="#000"/></svg></span>MADETOSCALE</div>
+  <div class="ctrls">
+    <div class="seg" role="group" aria-label="Language"><button id="lEN" aria-pressed="true">English</button><button id="lHI" aria-pressed="false">हिंदी</button></div>
+    <div class="seg" role="group" aria-label="Currency"><button id="cUSD" aria-pressed="false">USD $</button><button id="cINR" aria-pressed="true">INR ₹</button></div>
+    <label class="rate" for="fx">₹ per $ <input id="fx" type="number" step="0.5" value="96"></label>
+  </div>
+</header>
+
+<section class="hero">
+  <h1 data-hi="आपका AI bill <em>कैसे</em> बनता है?">How does your AI bill <em>actually</em> work?</h1>
+  <p class="lede" data-hi="ChatGPT, Claude या कोई भी AI, आपके words नहीं गिनता. वो tokens गिनता है. पाँच छोटे steps में समझो कि पैसा कहाँ जाता है, फिर उसे कम करो. कोई technical background ज़रूरी नहीं.">ChatGPT, Claude and every other AI don't count your words. They count tokens. Five short steps show where the money goes, then how to cut it. No technical background needed.</p>
+  <nav class="steps" aria-label="Steps">
+    <a href="#s1"><i>1</i><span data-hi="Token क्या है">What is a token</span></a>
+    <a href="#s2"><i>2</i><span data-hi="Meter कैसे चलता है">The meter</span></a>
+    <a href="#s3"><i>3</i><span data-hi="लंबी chats महँगी क्यों">Why long chats cost more</span></a>
+    <a href="#s4"><i>4</i><span data-hi="3 hacks">3 hacks</span></a>
+    <a href="#s5"><i>5</i><span data-hi="Credits खत्म न हों">Never run out of credits</span></a>
+  </nav>
+</section>
+
+<div class="lesson">
+
+<!-- 1 TOKENS -->
+<section class="card" id="s1">
+  <div class="eyebrow" data-hi="Step 1">Step 1</div>
+  <h2 data-hi="Token क्या होता है?">What is a token?</h2>
+  <p class="say" data-hi="Text का एक छोटा टुकड़ा. छोटे words एक token होते हैं, लंबे words कई टुकड़ों में टूट जाते हैं. नीचे कुछ भी type करो और देखो AI उसे कैसे काटता है. Hindi में same बात के लिए अक्सर ज़्यादा tokens लगते हैं.">A small piece of text. Short words are one token, long words break into several. Type anything below and watch how the AI chops it up. Hindi usually takes more tokens than English for the same meaning.</p>
+  <div class="split">
+    <div class="panel">
+      <label class="eyebrow" for="txt" data-hi="आपका text">Your text</label>
+      <textarea id="txt"></textarea>
+      <div class="chips" style="margin-top:10px">
+        <button class="chip" data-sample="en" data-hi="English example">English example</button>
+        <button class="chip" data-sample="hi" data-hi="Hindi example">Hindi example</button>
+        <button class="chip" data-sample="mix" data-hi="System prompt example">System prompt example</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="eyebrow" data-hi="AI इसे ऐसे देखता है">How the AI sees it</div>
+      <div class="tokens" id="tokViz" style="margin-top:10px"></div>
+      <div class="kv">
+        <div><b id="kTok">0</b><span data-hi="tokens (अंदाज़ा)">tokens (estimate)</span></div>
+        <div><b id="kWords">0</b><span data-hi="words">words</span></div>
+        <div class="big"><b id="kIn">–</b><span id="kInS"></span></div>
+      </div>
+      <div class="f" style="margin-top:12px"><label for="estModel" data-hi="Price इस model पर">Price on</label><select id="estModel"></select></div>
+      <p class="note" id="estNote"></p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 METER -->
+<section class="card" id="s2">
+  <div class="eyebrow">Step 2</div>
+  <h2 data-hi="Meter: दो prices, एक bill">The meter: two prices, one bill</h2>
+  <p class="say" data-hi="हर message पर दो चीज़ें गिनी जाती हैं. Input: जो आप भेजते हो. Output: जो AI लिखकर वापस देता है. Output लगभग 5 गुना महँगा है, क्योंकि AI पढ़ता एक साथ है पर लिखता एक-एक token करके. Sliders खींचो और receipt देखो.">Every message is billed twice. Input: what you send. Output: what the AI writes back. Output costs about 5 times more, because the AI reads everything at once but writes one token at a time. Drag the sliders and watch the receipt.</p>
+  <div class="split">
+    <div class="panel">
+      <div class="eyebrow" data-hi="Model चुनो">Pick a model</div>
+      <div class="chips" id="mChips" style="margin-top:10px"></div>
+      <div class="fields">
+        <div class="f"><label for="wIn" data-hi="आप कितने words भेजते हो <span id='wInV'></span>">Words you send <span id="wInV"></span></label><input id="wIn" type="range" min="20" max="5000" step="20" value="300"><div class="hint" data-hi="सवाल + जो document या instructions साथ जाती हैं">Your question plus any documents or instructions attached to it</div></div>
+        <div class="f"><label for="wOut" data-hi="AI कितने words लिखता है <span id='wOutV'></span>">Words the AI writes back <span id="wOutV"></span></label><input id="wOut" type="range" min="10" max="2000" step="10" value="200"></div>
+        <div class="tog" style="padding:6px 0 0"><div><b data-hi="Thinking mode on">Thinking mode on</b><small data-hi="कुछ models जवाब से पहले सोचते हैं. वो छुपी सोच भी output rate पर bill होती है.">Some models think before answering. That hidden thinking is billed at the output rate too.</small></div><span class="sw real"><input type="checkbox" id="wThink" aria-label="Thinking mode"><i></i></span></div>
+      </div>
+    </div>
+    <div>
+      <div class="receipt" aria-live="polite">
+        <div class="eyebrow" data-hi="एक message की receipt">Receipt for one message</div>
+        <div class="rl"><div data-hi="Input (आपने भेजा)">Input (what you sent)<small id="rInS"></small></div><div class="amt" id="rIn"></div></div>
+        <div class="rl"><div data-hi="Output (AI ने लिखा)">Output (what the AI wrote)<small id="rOutS"></small></div><div class="amt" id="rOut"></div></div>
+        <div class="rl" id="rThinkRow"><div data-hi="Thinking (छुपा हुआ)">Thinking (hidden)<small id="rThinkS"></small></div><div class="amt" id="rThink"></div></div>
+        <div class="rl total"><div data-hi="एक message">One message</div><div class="amt" id="rTot"></div></div>
+        <div class="rl total" style="font-size:15px;padding-top:0"><div data-hi="1,000 messages">1,000 messages</div><div class="amt" id="rTotK"></div></div>
+        <div class="track" id="rBar"></div>
+        <div class="legend"><span><i style="background:var(--in)"></i>Input</span><span><i style="background:var(--out)"></i>Output</span><span><i style="background:var(--think)"></i>Thinking</span></div>
+      </div>
+      <div class="callout" id="rSay"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 LONG CHATS -->
+<section class="card" id="s3">
+  <div class="eyebrow">Step 3</div>
+  <h2 data-hi="लंबी chats महँगी क्यों हो जाती हैं">Why long chats get expensive</h2>
+  <p class="say" data-hi="AI की कोई memory नहीं होती. हर नए message के साथ पूरी पुरानी chat दोबारा भेजी जाती है, और उसका दोबारा bill बनता है. Message 50 पर AI पिछले 49 messages फिर से पढ़ता है. Slider खींचो.">The AI has no memory. With every new message, the whole earlier chat is sent again, and billed again. By message 50 the AI is re-reading 49 old messages. Drag the slider.</p>
+  <div class="split">
+    <div class="panel">
+      <div class="f"><label for="nMsg" data-hi="Chat में messages <span id='nMsgV'></span>">Messages in this chat <span id="nMsgV"></span></label><input id="nMsg" type="range" min="1" max="60" step="1" value="12"></div>
+      <div class="kv">
+        <div><b id="c1">–</b><span data-hi="message 1 की कीमत">cost of message 1</span></div>
+        <div><b id="cN">–</b><span id="cNS"></span></div>
+        <div class="big"><b id="cTot">–</b><span data-hi="पूरी chat का total">whole chat total</span></div>
+      </div>
+      <p class="note" data-hi="मान लिया: 2,000 tokens की fixed instructions, हर सवाल 100 tokens, हर जवाब 300 tokens, Claude Sonnet 5.5 पर.">Assumes 2,000 tokens of fixed instructions, 100-token questions, 300-token answers, on Claude Sonnet 5.5.</p>
+    </div>
+    <div class="panel">
+      <div class="eyebrow" data-hi="हर message में क्या-क्या जाता है">What travels with each message</div>
+      <div class="stack-viz" id="stackViz"></div>
+      <div class="legend"><span><i style="background:var(--in)"></i><span data-hi="Instructions + नया सवाल">Instructions + new question</span></span><span><i style="background:var(--hist)"></i><span data-hi="पुरानी chat (दोबारा)">Old chat, sent again</span></span><span><i style="background:var(--out)"></i><span data-hi="नया जवाब">New answer</span></span></div>
+      <div class="callout warn" id="cSay"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 HACKS -->
+<section class="card" id="s4">
+  <div class="eyebrow">Step 4</div>
+  <h2 data-hi="तीन hacks जो bill काट देते हैं">Three hacks that cut the bill</h2>
+  <p class="say" data-hi="एक असली example लो: एक support bot, जिसके हर सवाल के साथ 50,000 tokens का product manual जाता है. Cards को tap करके on/off करो और bill बदलते देखो.">Take a real example: a support bot that sends a 50,000-token product manual with every question. Tap the cards on and off and watch the bill change.</p>
+  <div class="scen">
+    <span data-hi="Scenario:">Scenario:</span>
+    <select id="scen"><option value="support">Support bot, 100 questions a day</option><option value="whatsapp">WhatsApp shop bot, 1,000 chats a day</option><option value="content">Content writer, 50 articles a day</option><option value="docs">PDF Q&amp;A, 200 questions a day</option></select>
+  </div>
+  <div class="hacks">
+    <button class="hack" id="hCache" aria-pressed="false"><div class="hd"><h3 data-hi="1. Caching">1. Caching</h3><span class="sw"><i></i></span></div><p data-hi="वो 50,000-token manual हर बार full price पर क्यों भेजना? AI को बोलो 'इसे याद रखो'. पहली बार थोड़ा extra, फिर हर reuse 95% सस्ता.">Why send that 50,000-token manual at full price every time? Tell the AI to remember it. The first save costs a little extra, then every reuse is 95% cheaper.</p><span class="sv" id="hCacheS"></span></button>
+    <button class="hack" id="hSmall" aria-pressed="false"><div class="hd"><h3 data-hi="2. छोटा model">2. Smaller model</h3><span class="sw"><i></i></span></div><p data-hi="हर सवाल को सबसे smart model की ज़रूरत नहीं. FAQs, tagging और summaries के लिए छोटा model लो, जो 20 गुना सस्ता है. Quality पहले test करो.">Not every question needs the smartest model. Route FAQs, tagging and summaries to a small model that costs 20 times less. Test the quality first.</p><span class="sv" id="hSmallS"></span></button>
+    <button class="hack" id="hBatch" aria-pressed="false"><div class="hd"><h3 data-hi="3. Batch">3. Batch</h3><span class="sw"><i></i></span></div><p data-hi="जवाब अभी नहीं चाहिए? Reports, translations, bulk content को Batch में भेजो. Anthropic और OpenAI दोनों आधा price लेते हैं. यहाँ मान लिया कि आधा काम wait कर सकता है.">Don't need the answer right now? Send reports, translations and bulk content through Batch. Anthropic and OpenAI both charge half. Here we assume half the work can wait.</p><span class="sv" id="hBatchS"></span></button>
+  </div>
+  <div class="compare" aria-live="polite">
+    <div class="stat"><div class="eyebrow" data-hi="अभी · हर महीने">Now · per month</div><div class="v" id="hNow">–</div><div class="s" id="hNowS"></div></div>
+    <div class="stat"><div class="eyebrow" data-hi="Hacks के साथ · हर महीने">With hacks · per month</div><div class="v" id="hOpt">–</div><div class="s" id="hOptS"></div></div>
+    <div class="stat save"><div class="eyebrow" data-hi="बचत">You save</div><div class="v" id="hSave">–</div><div class="s" id="hSaveS"></div></div>
+  </div>
+  <p class="note" data-hi="अपने असली numbers डालने हैं? नीचे पूरा calculator खोलो.">Want to plug in your own numbers? Open the full calculator further down.</p>
+</section>
+
+<!-- 5 CREDITS -->
+<section class="card" id="s5">
+  <div class="eyebrow">Step 5</div>
+  <h2 data-hi="Credits बार-बार खत्म न हों, इसके लिए क्या करें">How to stop running out of credits</h2>
+  <p class="say" data-hi="Per-token billing का मतलब है कि ज़्यादा use, ज़्यादा bill, और एक दिन credits खत्म. चार रास्ते हैं: कई free quotas को जोड़ो, flat monthly plan लो, एक key से कई providers use करो, या model अपनी machine पर चलाओ. हर एक का एक catch है.">Per-token billing means more use, bigger bill, and one day the credits run dry. There are four ways around it: pool many free quotas, pay a flat monthly fee, use one key across many providers, or run the model on your own machine. Each has a catch.</p>
+  <div class="ways">
+    <div class="way">
+      <div class="top"><h3>OmniRoute</h3><span class="tag free" data-hi="Free · खुद host करो">Free · self-hosted</span></div>
+      <p data-hi="एक open-source gateway (MIT license) जो आपके लिए एक ही endpoint बनाता है, और पीछे कई providers के free tiers को एक 'combo' में जोड़ता है. एक provider का quota खत्म, तो request अपने आप अगले पर चली जाती है, बिना error के. Project के docs के हिसाब से 35 pools मिलाकर महीने के 1.6 billion free tokens तक, पर rate limits हर provider के अलग हैं.">An open-source gateway (MIT licence) that gives you one endpoint and pools many providers' free tiers behind it in a "combo". When one provider's quota runs out, the request moves to the next one automatically, with no error. The project's docs estimate up to 1.6 billion free tokens a month across 35 pools, though rate limits vary by provider.</p>
+      <dl><dt data-hi="किसके लिए">Best for</dt><dd data-hi="Coding tools (Claude Code, Cursor, Cline), experiments, side projects">Coding tools (Claude Code, Cursor, Cline), experiments, side projects</dd><dt data-hi="Catch">Catch</dt><dd data-hi="आपको इसे खुद चलाना पड़ेगा (laptop या छोटा server). Free tiers धीमे और limited हो सकते हैं.">You run it yourself (laptop or small server). Free tiers can be slow and limited.</dd></dl>
+      <details><summary data-hi="कैसे शुरू करें">How to start</summary><pre>npm install -g omniroute &amp;&amp; omniroute
+# or
+docker run -p 20128:20128 diegosouzapw/omniroute</pre><p style="margin-top:8px" data-hi="Dashboard port 20128 पर खुलता है. पहले INITIAL_PASSWORD set करो. Claude Code में ANTHROPIC_BASE_URL को इस gateway पर point करो. Source: <a href='https://github.com/diegosouzapw/OmniRoute' target='_blank' rel='noopener'>github.com/diegosouzapw/OmniRoute</a>">The dashboard opens on port 20128. Set INITIAL_PASSWORD first. In Claude Code, point ANTHROPIC_BASE_URL at the gateway. Source: <a href="https://github.com/diegosouzapw/OmniRoute" target="_blank" rel="noopener">github.com/diegosouzapw/OmniRoute</a></p></details>
+    </div>
+    <div class="way">
+      <div class="top"><h3>CheapestInference</h3><span class="tag" data-hi="Flat monthly · $22 से">Flat monthly · from $22</span></div>
+      <p data-hi="Per-token की जगह subscription. आप रोज़ का एक 8-घंटे का window reserve करते हो (Asia-Pacific, Europe या Americas) और उस window में अपने pool के हर model पर unlimited tokens मिलते हैं. Core plan $22/month (DeepSeek V4.1 Flash, MiMo V2.6 Flash), Frontier $71 (GLM 5.3, MiniMax M3), Flagship $199 (Kimi K3, Qwen3.8 Max). OpenAI और Anthropic SDK compatible, Claude Code के साथ चलता है.">A subscription instead of per-token. You reserve one 8-hour daily window (Asia-Pacific, Europe or Americas) and get unlimited tokens on every model in your pool during it. Core is $22 a month (DeepSeek V4.1 Flash, MiMo V2.6 Flash), Frontier $71 (GLM 5.3, MiniMax M3), Flagship $199 (Kimi K3, Qwen3.8 Max). OpenAI and Anthropic SDK compatible, works with Claude Code.</p>
+      <dl><dt data-hi="किसके लिए">Best for</dt><dd data-hi="Heavy daily users जो हर महीने credits खत्म कर देते हैं और open models से खुश हैं">Heavy daily users who burn through credits every month and are happy with open models</dd><dt data-hi="Catch">Catch</dt><dd data-hi="Claude या GPT नहीं, सिर्फ open-source models. एक key पर एक request at a time. 24/7 चाहिए तो तीनों windows लेनी होंगी (Frontier पर करीब $228).">No Claude or GPT, only open-source models. One request at a time per key. For 24/7 you need all three windows (about $228 on Frontier).</dd></dl>
+      <details><summary data-hi="कैसे शुरू करें">How to start</summary><p style="margin-top:8px" data-hi="<a href='https://cheapestinference.com/' target='_blank' rel='noopener'>cheapestinference.com</a> पर plan लो, अपना time window चुनो, API key बनाओ, और अपने tool में base URL बदल दो. Prices October 2026 के हैं.">Pick a plan at <a href="https://cheapestinference.com/" target="_blank" rel="noopener">cheapestinference.com</a>, choose your time window, create an API key, and change the base URL in your tool. Prices as of October 2026.</p></details>
+    </div>
+    <div class="way">
+      <div class="top"><h3>OpenRouter</h3><span class="tag" data-hi="एक key · कई providers">One key · many providers</span></div>
+      <p data-hi="एक API key, और पीछे सैकड़ों models कई companies के. Pay-as-you-go, पर कुछ models ':free' tag के साथ आते हैं जिन पर rate limit के अंदर कोई charge नहीं. एक provider down हो तो दूसरे पर fallback.">One API key, hundreds of models from many companies behind it. Pay as you go, but some models carry a ":free" tag and cost nothing within a rate limit. If one provider is down, it can fall back to another.</p>
+      <dl><dt data-hi="किसके लिए">Best for</dt><dd data-hi="Models compare करना, बिना 5 accounts बनाए">Comparing models without creating five accounts</dd><dt data-hi="Catch">Catch</dt><dd data-hi="Free models की rate limits tight हैं. Paid use पर credits खरीदते समय छोटा सा extra fee.">Free models have tight rate limits. Paid use adds a small fee when you buy credits.</dd></dl>
+      <details><summary data-hi="कैसे शुरू करें">How to start</summary><p style="margin-top:8px" data-hi="<a href='https://openrouter.ai/' target='_blank' rel='noopener'>openrouter.ai</a> पर key बनाओ, models list में 'free' filter लगाओ. Current limits वहीं check करो.">Create a key at <a href="https://openrouter.ai/" target="_blank" rel="noopener">openrouter.ai</a> and filter the model list by "free". Check the current limits there.</p></details>
+    </div>
+    <div class="way">
+      <div class="top"><h3 data-hi="अपनी machine पर चलाओ (Ollama)">Run it on your own machine (Ollama)</h3><span class="tag free" data-hi="₹0 per token">₹0 per token</span></div>
+      <p data-hi="Open-source models download करो और अपने laptop या server पर चलाओ. कोई credits नहीं, कोई per-token bill नहीं, और data बाहर नहीं जाता. Open WebUI के साथ ChatGPT जैसा interface भी मिल जाता है.">Download open-source models and run them on your laptop or server. No credits, no per-token bill, and your data never leaves the machine. Pair it with Open WebUI for a ChatGPT-style interface.</p>
+      <dl><dt data-hi="किसके लिए">Best for</dt><dd data-hi="Private data, सीखना, internal tools, offline use">Private data, learning, internal tools, offline use</dd><dt data-hi="Catch">Catch</dt><dd data-hi="अच्छी RAM या GPU चाहिए. बड़े models slow चलेंगे, और quality Claude या GPT जितनी नहीं.">Needs decent RAM or a GPU. Big models run slowly, and quality is below Claude or GPT.</dd></dl>
+      <details><summary data-hi="कैसे शुरू करें">How to start</summary><pre>ollama run llama3</pre><p style="margin-top:8px" data-hi="<a href='https://ollama.com/' target='_blank' rel='noopener'>ollama.com</a> से install करो. Google AI Studio और Groq जैसे providers के free tiers भी हैं, limits उनकी sites पर देखो.">Install from <a href="https://ollama.com/" target="_blank" rel="noopener">ollama.com</a>. Providers like Google AI Studio and Groq also offer free tiers; check their current limits on their sites.</p></details>
+    </div>
+  </div>
+
+  <div class="picker">
+    <h3 data-hi="मेरे लिए कौन सा सही है?">Which one fits me?</h3>
+    <div class="q"><div class="ql" data-hi="1. आप AI किसलिए use करते हो?">1. What do you mainly use AI for?</div><div class="chips" data-q="use"><button class="chip" data-v="code" aria-pressed="false" data-hi="Coding tools">Coding tools</button><button class="chip" data-v="app" aria-pressed="false" data-hi="Customers के लिए app या bot">An app or bot for customers</button><button class="chip" data-v="learn" aria-pressed="false" data-hi="सीखना और experiments">Learning and experiments</button></div></div>
+    <div class="q"><div class="ql" data-hi="2. Claude या GPT जैसी quality ज़रूरी है?">2. Do you need Claude or GPT level quality?</div><div class="chips" data-q="q"><button class="chip" data-v="yes" aria-pressed="false" data-hi="हाँ, ज़रूरी है">Yes, it matters</button><button class="chip" data-v="no" aria-pressed="false" data-hi="Open models भी चलेंगे">Open models are fine</button></div></div>
+    <div class="q"><div class="ql" data-hi="3. महीने का budget?">3. Monthly budget?</div><div class="chips" data-q="b"><button class="chip" data-v="0" aria-pressed="false">₹0</button><button class="chip" data-v="low" aria-pressed="false" data-hi="₹2,000 तक">Up to ₹2,000</button><button class="chip" data-v="high" aria-pressed="false" data-hi="₹2,000 से ज़्यादा">More than ₹2,000</button></div></div>
+    <div class="verdict" id="verdict" hidden><b id="vT"></b><p id="vP"></p></div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section class="card" id="s6">
+  <div class="eyebrow" data-hi="खुद को test करो">Test yourself</div>
+  <h2 data-hi="Bill guess करो">Guess the bill</h2>
+  <p class="say" data-hi="तीन सवाल. जवाब tap करो. Prices Claude Sonnet 5.5 के हैं, ₹96 per dollar पर.">Three questions. Tap an answer. Prices are Claude Sonnet 5.5 at ₹96 per dollar.</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<!-- GLOSSARY -->
+<section class="card" id="s7">
+  <div class="eyebrow" data-hi="शब्दकोश">Glossary</div>
+  <h2 data-hi="10 शब्द जो हर AI bill पर मिलेंगे">10 words you'll see on every AI bill</h2>
+  <div class="gloss" id="gloss"></div>
+</section>
+
+<!-- ADVANCED CALCULATOR -->
+<details class="adv" id="adv">
+  <summary><div><div class="eyebrow" data-hi="Power users के लिए">For power users</div><h2 data-hi="पूरा calculator">The full calculator</h2><p class="say" data-hi="अपने असली numbers डालो, हर lever अलग से test करो, और हर model पर same workload का खर्चा देखो.">Plug in your real numbers, test every lever on its own, and compare the same workload on every model.</p></div><span class="btn" data-hi="खोलो">Open</span></summary>
+  <div class="advbody">
+  <div class="eyebrow" style="margin-bottom:8px">Start from an example</div>
+  <div class="chips" id="presets" style="margin-bottom:18px"></div>
+  <div class="grid">
+    <section class="pnl" aria-labelledby="wl">
+      <h2 id="wl">Your workload</h2>
+      <div class="sub">Tokens are counted per message. 1,000 tokens ≈ 750 English words.</div>
+      <div class="fields">
+        <div class="f"><label for="model">Model</label><select id="model"></select></div>
+        <div class="f"><label for="sys">Fixed instructions + documents <span>tokens</span></label><input id="sys" type="number" min="0" step="100"><div class="hint">System prompt, product manual, policies. Sent with every message.</div></div>
+        <div class="two">
+          <div class="f"><label for="usr">User message</label><input id="usr" type="number" min="0" step="10"></div>
+          <div class="f"><label for="out">AI reply</label><input id="out" type="number" min="0" step="10"></div>
+        </div>
+        <div class="two">
+          <div class="f"><label for="think">Thinking <span>per reply</span></label><input id="think" type="number" min="0" step="100"></div>
+          <div class="f"><label for="turns">Messages <span>per chat</span></label><input id="turns" type="number" min="1" step="1"></div>
+        </div>
+        <div class="f"><label for="convs">Chats per day</label><input id="convs" type="number" min="1" step="10"></div>
+      </div>
+      <div class="sep"></div>
+      <h2 style="margin-top:6px">Savings levers</h2>
+      <div class="sub">Turn these on to see the optimized bill.</div>
+      <div class="tog"><div><b>Prompt caching</b><small>Reuse the fixed instructions at the cache-read price.</small></div><span class="sw real"><input type="checkbox" id="cache" aria-label="Prompt caching"><i></i></span></div>
+      <div class="sub-opt" id="cacheOpts">
+        <div class="f"><label for="ttl">Keep cache for</label><select id="ttl"><option value="5">5 minutes</option><option value="60">1 hour</option></select></div>
+        <div class="tog" style="padding:4px 0"><div><b>Also cache chat history</b><small>Older messages are read from cache too.</small></div><span class="sw real"><input type="checkbox" id="cacheHist" aria-label="Cache chat history"><i></i></span></div>
+      </div>
+      <div class="tog"><div><b>Trim chat history</b><small>Send only the last few messages instead of the whole chat.</small></div><span class="sw real"><input type="checkbox" id="trim" aria-label="Trim chat history"><i></i></span></div>
+      <div class="sub-opt" id="trimOpts"><div class="f"><label for="keep">Keep last <span id="keepV"></span></label><input id="keep" type="range" min="1" max="20" step="1"></div></div>
+      <div class="tog"><div><b>Batch API</b><small>50% off for work that can wait up to 24 hours.</small></div><span class="sw real"><input type="checkbox" id="batch" aria-label="Batch API"><i></i></span></div>
+      <div class="sub-opt" id="batchOpts"><div class="f"><label for="bshare">Share of traffic that can wait <span id="bshareV"></span></label><input id="bshare" type="range" min="5" max="100" step="5"></div></div>
+      <div class="tog"><div><b>Shorter replies</b><small>Ask for concise answers or set a max length.</small></div><span class="sw real"><input type="checkbox" id="short" aria-label="Shorter replies"><i></i></span></div>
+      <div class="sub-opt" id="shortOpts"><div class="f"><label for="cut">Cut reply length by <span id="cutV"></span></label><input id="cut" type="range" min="10" max="60" step="5"></div></div>
+      <div class="tog"><div><b>Lower thinking budget</b><small>Cap reasoning tokens on easy tasks.</small></div><span class="sw real"><input type="checkbox" id="lowthink" aria-label="Lower thinking budget"><i></i></span></div>
+      <div class="sub-opt" id="thinkOpts"><div class="f"><label for="tcut">Cut thinking by <span id="tcutV"></span></label><input id="tcut" type="range" min="10" max="90" step="10"></div></div>
+      <div class="f" style="margin-top:6px"><label for="model2">Run optimized version on</label><select id="model2"></select></div>
+    </section>
+    <section style="display:grid;gap:20px;min-width:0">
+      <div class="pnl" aria-live="polite">
+        <div class="compare" style="margin-top:0">
+          <div class="stat" style="background:var(--panel)"><div class="eyebrow">Now · per month</div><div class="v" id="sNow">–</div><div class="s" id="sNowS"></div></div>
+          <div class="stat" style="background:var(--panel)"><div class="eyebrow">Optimized · per month</div><div class="v" id="sOpt">–</div><div class="s" id="sOptS"></div></div>
+          <div class="stat save"><div class="eyebrow">You save</div><div class="v" id="sSave">–</div><div class="s" id="sSaveS"></div></div>
+        </div>
+        <div class="bars">
+          <div class="bar-row"><span class="t">Now</span><div class="track" id="bNow" style="margin:0;background:var(--panel)"></div><span class="amt" id="aNow"></span></div>
+          <div class="bar-row"><span class="t">Optimized</span><div class="track" id="bOpt" style="margin:0;background:var(--panel)"></div><span class="amt" id="aOpt"></span></div>
+        </div>
+        <div class="legend"><span><i style="background:var(--in)"></i>Instructions + message</span><span><i style="background:var(--hist)"></i>Re-sent chat history</span><span><i style="background:var(--cache)"></i>Cache reads + writes</span><span><i style="background:var(--out)"></i>Replies</span><span><i style="background:var(--think)"></i>Thinking</span></div>
+        <p class="note" id="insight"></p>
+      </div>
+      <div class="pnl">
+        <div class="row-head"><div><h2>Your biggest savings</h2><div class="sub">Each lever on its own, ranked by money saved per month.</div></div><button class="btn" id="applyAll">Turn on top 3</button></div>
+        <div class="recs" id="recs"></div>
+      </div>
+      <div class="pnl">
+        <h2>Same workload on every model</h2>
+        <div class="sub">Monthly cost with your current savings levers. Prices per 1M tokens.</div>
+        <div class="tablewrap"><table><thead><tr><th>Model</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cache read</th><th class="num">Per month</th></tr></thead><tbody id="mt"></tbody></table></div>
+        <p class="note">Pick by job, not by brand: small models for FAQs, tagging and summaries; mid models for writing and coding; frontier models for hard reasoning.</p>
+      </div>
+    </section>
+  </div>
+  </div>
+</details>
+
+<section class="cta">
+  <div><h2 data-hi="अपना AI bill हमसे कम करवाना है?">Want us to cut your AI bill?</h2><p data-hi="MadeToScale × CodeBiosis production AI apps के लिए caching, routing और batching set up करते हैं.">MadeToScale × CodeBiosis set up caching, routing and batching for production AI apps.</p></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><code>contact@codebiosis.com</code><button class="btn" id="copyMail" data-hi="Email copy करो">Copy email</button></div>
+</section>
+</div>
+
+<footer>
+  <div data-hi="Prices <a href='https://platform.claude.com/docs/en/about-claude/pricing' target='_blank' rel='noopener'>Claude API pricing</a> और <a href='https://developers.openai.com/api/docs/pricing' target='_blank' rel='noopener'>OpenAI API pricing</a> से, October 2026 में check किए. Standard short-context rates. सब अंदाज़े हैं. Third-party services के plans उनकी sites पर verify करो.">Prices as listed on <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Claude API pricing</a> and <a href="https://developers.openai.com/api/docs/pricing" target="_blank" rel="noopener">OpenAI API pricing</a>, checked October 2026. Standard short-context rates; estimates only. Verify third-party plans on their own sites.</div>
+  <div>Built by MadeToScale · @madetoscale2026</div>
+</footer>
+</div>
+
+<script>
+const MODELS=[
+ {id:'haiku',name:'Claude Haiku 5.5',short:'Haiku 5.5',v:'Anthropic',in:.10,out:.50,w5:.125,w60:.20,rd:.01,long:{at:100000,in:.50,out:2.50,w5:.625,w60:1,rd:.05}},
+ {id:'sonnet',name:'Claude Sonnet 5.5',short:'Sonnet 5.5',v:'Anthropic',in:2,out:10,w5:2.5,w60:4,rd:.10},
+ {id:'opus',name:'Claude Opus 5.5',short:'Opus 5.5',v:'Anthropic',in:4,out:20,w5:5,w60:8,rd:.20},
+ {id:'fable',name:'Claude Fable 5.1',short:'Fable 5.1',v:'Anthropic',in:10,out:50,w5:12.5,w60:20,rd:.25},
+ {id:'luna',name:'GPT-6 Luna',short:'GPT-6 Luna',v:'OpenAI',in:.10,out:.50,w5:.125,w60:.125,rd:.01},
+ {id:'sol',name:'GPT-6.1 Sol',short:'GPT-6.1 Sol',v:'OpenAI',in:2,out:10,w5:2.5,w60:2.5,rd:.10},
+ {id:'astra',name:'GPT-6 Astra',short:'GPT-6 Astra',v:'OpenAI',in:10,out:50,w5:12.5,w60:12.5,rd:1,long:{at:272000,in:20,out:75,w5:25,w60:25,rd:2}},
+];
+const M=Object.fromEntries(MODELS.map(m=>[m.id,m]));
+const DOWN={fable:'opus',opus:'sonnet',sonnet:'haiku',astra:'sol',sol:'luna'};
+const PRESETS={
+ support:{label:'Customer support bot',model:'sonnet',sys:20000,usr:80,out:250,think:0,turns:6,convs:500},
+ agent:{label:'AI agent with tools',model:'sonnet',sys:8000,usr:1500,out:600,think:2000,turns:25,convs:100},
+ content:{label:'Content writer',model:'sonnet',sys:3000,usr:300,out:1500,think:0,turns:3,convs:200},
+ docqa:{label:'Document Q&A (PDFs)',model:'opus',sys:60000,usr:60,out:400,think:1000,turns:5,convs:150},
+ whatsapp:{label:'WhatsApp shop bot (Hindi)',model:'haiku',sys:6000,usr:60,out:150,think:0,turns:8,convs:2000},
+};
+const $=id=>document.getElementById(id);
+const S={cur:'INR',fx:96,lang:'en',preset:'support',model:'sonnet',model2:'sonnet',sys:20000,usr:80,out:250,think:0,turns:6,convs:500,
+ cache:false,ttl:5,cacheHist:false,trim:false,keep:6,batch:false,bshare:50,short:false,cut:30,lowthink:false,tcut:50,
+ mModel:'sonnet',wIn:300,wOut:200,wThink:false,nMsg:12,scen:'support',hCache:false,hSmall:false,hBatch:false,estModel:'sonnet'};
+try{const s=JSON.parse(localStorage.getItem('tokenSaverV3')||'null');if(s)Object.assign(S,s)}catch(e){}
+function save(){try{localStorage.setItem('tokenSaverV3',JSON.stringify(S))}catch(e){}}
+const HI=S.lang==='hi';
+const T=(en,hi)=>S.lang==='hi'?hi:en;
+function fmt(usd,dp){const v=S.cur==='INR'?usd*S.fx:usd;const sym=S.cur==='INR'?'₹':'$';
+ if(dp===undefined)dp=Math.abs(v)>=100?0:Math.abs(v)>=1?2:Math.abs(v)>=0.01?3:5;
+ return sym+v.toLocaleString(S.cur==='INR'?'en-IN':'en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp})}
+const nf=n=>n.toLocaleString('en-US');
+
+/* ---------- language ---------- */
+document.querySelectorAll('[data-hi]').forEach(el=>{el.dataset.en=el.innerHTML});
+function applyLang(){document.querySelectorAll('[data-hi]').forEach(el=>{el.innerHTML=S.lang==='hi'?el.dataset.hi:el.dataset.en});
+ $('lEN').setAttribute('aria-pressed',String(S.lang==='en'));$('lHI').setAttribute('aria-pressed',String(S.lang==='hi'));
+ document.documentElement.lang=S.lang==='hi'?'hi':'en'}
+$('lEN').addEventListener('click',()=>{S.lang='en';applyLang();renderAll();save()});
+$('lHI').addEventListener('click',()=>{S.lang='hi';applyLang();renderAll();save()});
+
+/* ---------- 1. token visualiser ---------- */
+const SAMPLES={en:'Hello! My order has not arrived yet. Can you tell me when it will be delivered? The order number is 48213.',
+ hi:'नमस्ते! मेरा order अभी तक नहीं आया है. क्या आप बता सकते हैं कि यह कब तक deliver होगा? Order number 48213 है.',
+ mix:'You are a helpful support assistant for an Indian D2C skincare brand. Answer in short, friendly Hinglish. Always check the order ID before giving delivery dates. Never promise refunds; share the returns policy link instead.'};
+function tokenize(t){const out=[];const re=/[ऀ-ॿঀ-෿]+|[A-Za-z]+|\d+|\s+|[^\sA-Za-z\dऀ-෿]/g;let m;
+ while((m=re.exec(t))){const s=m[0];if(/^\s+$/.test(s))continue;
+  if(/^[ऀ-෿]/.test(s)){for(let i=0;i<s.length;i+=2)out.push(s.slice(i,i+2))}
+  else if(/^[A-Za-z]+$/.test(s)&&s.length>6){let i=0;while(i<s.length){const n=i===0?Math.min(4,s.length):Math.min(3+(s.length-i>4?1:0),s.length-i);out.push(s.slice(i,i+n));i+=n}}
+  else if(/^\d+$/.test(s)&&s.length>3){for(let i=0;i<s.length;i+=3)out.push(s.slice(i,i+3))}
+  else out.push(s)}
+ return out}
+function est(){const t=$('txt').value;const toks=tokenize(t);const n=toks.length;const words=(t.trim().match(/\S+/g)||[]).length;
+ const m=M[S.estModel];const dev=(t.match(/[ऀ-෿]/g)||[]).length;
+ $('tokViz').innerHTML=toks.slice(0,400).map(x=>`<span>${x.replace(/</g,'&lt;')}</span>`).join('')+(n>400?`<span>… +${n-400}</span>`:'');
+ $('kTok').textContent=nf(n);$('kWords').textContent=nf(words);
+ $('kIn').textContent=fmt(n*m.in/1e6);$('kInS').textContent=T(`to send this once on ${m.short}. If the AI wrote it: ${fmt(n*m.out/1e6)}`,`इसे एक बार ${m.short} पर भेजने का खर्चा. अगर AI ये लिखता: ${fmt(n*m.out/1e6)}`);
+ $('estNote').textContent=dev>t.length-dev?T('Mostly Hindi text: expect roughly 2 to 3 times the tokens of the same meaning in English. Estimate only; every model counts slightly differently.','ज़्यादातर Hindi text: same बात English में होती तो करीब 2 से 3 गुना कम tokens लगते. ये सिर्फ अंदाज़ा है, हर model थोड़ा अलग गिनता है.'):T('Estimate only. Every model counts slightly differently. Rule of thumb: 1,000 tokens is about 750 English words.','सिर्फ अंदाज़ा. हर model थोड़ा अलग गिनता है. Rule of thumb: 1,000 tokens = लगभग 750 English words.')}
+$('txt').value=SAMPLES.en;
+$('txt').addEventListener('input',est);
+document.querySelectorAll('[data-sample]').forEach(b=>b.addEventListener('click',()=>{$('txt').value=SAMPLES[b.dataset.sample];est()}));
+$('estModel').addEventListener('change',e=>{S.estModel=e.target.value;est();save()});
+
+/* ---------- 2. meter ---------- */
+const W2T=1.33;
+function meter(){const m=M[S.mModel];const ti=Math.round(S.wIn*W2T),to=Math.round(S.wOut*W2T),tk=S.wThink?2000:0;
+ const ci=ti*m.in/1e6,co=to*m.out/1e6,ck=tk*m.out/1e6,tot=ci+co+ck;
+ $('wInV').textContent=nf(S.wIn)+T(' words',' words');$('wOutV').textContent=nf(S.wOut)+' words';
+ $('rIn').textContent=fmt(ci);$('rInS').textContent=`${nf(ti)} tokens × ${fmt(m.in,2)} / 1M`;
+ $('rOut').textContent=fmt(co);$('rOutS').textContent=`${nf(to)} tokens × ${fmt(m.out,2)} / 1M`;
+ $('rThinkRow').hidden=!S.wThink;$('rThink').textContent=fmt(ck);$('rThinkS').textContent=`${nf(tk)} tokens × ${fmt(m.out,2)} / 1M`;
+ $('rTot').textContent=fmt(tot);$('rTotK').textContent=fmt(tot*1000);
+ $('rBar').innerHTML=`<span style="width:${ci/tot*100}%;background:var(--in)"></span><span style="width:${co/tot*100}%;background:var(--out)"></span><span style="width:${ck/tot*100}%;background:var(--think)"></span>`;
+ const ratio=m.out/m.in;const outShare=(co+ck)/tot*100;
+ $('rSay').textContent=S.wThink?T(`Thinking is invisible to you but ${nf(tk)} tokens got billed at the output price. A short "Yes" can cost more than a long question.`,`Thinking आपको दिखती नहीं, पर ${nf(tk)} tokens output price पर bill हुए. एक छोटा सा "हाँ" भी लंबे सवाल से महँगा पड़ सकता है.`)
+  :outShare>50?T(`${outShare.toFixed(0)}% of this bill is the reply. On ${m.short} every output token costs ${ratio}× an input token. Asking for shorter answers is the quickest saving.`,`इस bill का ${outShare.toFixed(0)}% जवाब है. ${m.short} पर हर output token, input से ${ratio} गुना महँगा है. छोटे जवाब माँगना सबसे आसान बचत है.`)
+  :T(`${(100-outShare).toFixed(0)}% of this bill is what you sent. When the same documents go with every message, caching (Step 4) cuts that part by about 90%.`,`इस bill का ${(100-outShare).toFixed(0)}% वो है जो आपने भेजा. जब same documents हर message के साथ जाते हैं, caching (Step 4) इस हिस्से को करीब 90% काट देती है.`);
+ document.querySelectorAll('#mChips .chip').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.m===S.mModel)))}
+$('mChips').innerHTML=MODELS.map(m=>`<button class="chip" data-m="${m.id}" aria-pressed="false">${m.short}</button>`).join('');
+$('mChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;S.mModel=b.dataset.m;meter();save()});
+$('wIn').addEventListener('input',e=>{S.wIn=+e.target.value;meter();save()});
+$('wOut').addEventListener('input',e=>{S.wOut=+e.target.value;meter();save()});
+$('wThink').addEventListener('change',e=>{S.wThink=e.target.checked;meter();save()});
+
+/* ---------- 3. long chats ---------- */
+function chats(){const m=M.sonnet,F=2000,U=100,A=300,N=S.nMsg;let tot=0,c1=0,cN=0;const rows=[];
+ for(let i=1;i<=N;i++){const H=(i-1)*(U+A);const ci=(F+U)*m.in/1e6+H*m.in/1e6+A*m.out/1e6;tot+=ci;if(i===1)c1=ci;if(i===N)cN=ci;
+  if(N<=8||i===1||i===N||i%Math.ceil(N/6)===0)rows.push({i,F:F+U,H,A,ci})}
+ const max=F+U+(N-1)*(U+A)+A;
+ $('nMsgV').textContent=N;$('c1').textContent=fmt(c1);$('cN').textContent=fmt(cN);$('cNS').textContent=T(`cost of message ${N}`,`message ${N} की कीमत`);$('cTot').textContent=fmt(tot);
+ $('stackViz').innerHTML=rows.map(r=>`<div class="srow"><span class="t">Msg ${r.i}</span><div class="bar"><span style="width:${r.F/max*100}%;background:var(--in)"></span><span style="width:${r.H/max*100}%;background:var(--hist)"></span><span style="width:${r.A/max*100}%;background:var(--out)"></span></div><span class="amt">${fmt(r.ci)}</span></div>`).join('');
+ const hist=(N-1)*(U+A);
+ $('cSay').textContent=N===1?T('Message 1 carries only the instructions and your question. Nothing to re-send yet.','Message 1 में सिर्फ instructions और आपका सवाल जाता है. अभी कुछ दोबारा नहीं भेजा गया.')
+  :T(`Message ${N} re-sends ${nf(hist)} tokens of old chat, so it costs ${(cN/c1).toFixed(1)}× message 1. Fix: keep only the last few messages, or cache the history (Step 4).`,`Message ${N} पुरानी chat के ${nf(hist)} tokens दोबारा भेजता है, इसलिए message 1 से ${(cN/c1).toFixed(1)} गुना महँगा है. इलाज: सिर्फ आखिरी कुछ messages रखो, या history को cache करो (Step 4).`)}
+$('nMsg').addEventListener('input',e=>{S.nMsg=+e.target.value;chats();save()});
+
+/* ---------- 4. hacks ---------- */
+const SCEN={
+ support:{model:'sonnet',sys:50000,q:200,a:500,perDay:100,label:['Support bot, 100 questions a day','Support bot, रोज़ 100 सवाल']},
+ whatsapp:{model:'sonnet',sys:6000,q:60,a:150,perDay:1000,label:['WhatsApp shop bot, 1,000 chats a day','WhatsApp shop bot, रोज़ 1,000 chats']},
+ content:{model:'sonnet',sys:3000,q:300,a:1500,perDay:50,label:['Content writer, 50 articles a day','Content writer, रोज़ 50 articles']},
+ docs:{model:'opus',sys:60000,q:100,a:400,perDay:200,label:['PDF Q&A, 200 questions a day','PDF Q&A, रोज़ 200 सवाल']}};
+function hackCost(sc,o){const m=M[o.small?DOWN[sc.model]:sc.model];const n=sc.perDay;let tot;
+ if(o.cache){tot=sc.sys*m.w5/1e6+(n-1)*sc.sys*m.rd/1e6+n*(sc.q*m.in+sc.a*m.out)/1e6}else{tot=n*((sc.sys+sc.q)*m.in+sc.a*m.out)/1e6}
+ if(o.batch)tot*=0.75;return tot*30}
+function hacks(){const sc=SCEN[S.scen];const base=hackCost(sc,{});const opt=hackCost(sc,{cache:S.hCache,small:S.hSmall,batch:S.hBatch});
+ const sm=M[DOWN[sc.model]],bm=M[sc.model];
+ $('hCacheS').textContent='−'+fmt(base-hackCost(sc,{cache:true}))+T(' / month',' / महीना');
+ $('hSmallS').textContent='−'+fmt(base-hackCost(sc,{small:true}))+T(` / month on ${sm.short}`,` / महीना ${sm.short} पर`);
+ $('hBatchS').textContent='−'+fmt(base-hackCost(sc,{batch:true}))+T(' / month',' / महीना');
+ ['hCache','hSmall','hBatch'].forEach(k=>$(k).setAttribute('aria-pressed',String(S[k])));
+ $('hNow').textContent=fmt(base);$('hNowS').textContent=`${bm.short} · ${fmt(base/30/sc.perDay)} ${T('per question','हर सवाल')}`;
+ $('hOpt').textContent=fmt(opt);$('hOptS').textContent=`${(S.hSmall?sm:bm).short} · ${fmt(opt/30/sc.perDay)} ${T('per question','हर सवाल')}`;
+ const sv=base-opt;$('hSave').textContent=sv>0?`${(sv/base*100).toFixed(0)}%`:'0%';
+ $('hSaveS').textContent=sv>0?T(`${fmt(sv)} a month · ${fmt(sv*12,0)} a year · ${(base/opt).toFixed(1)}× cheaper`,`${fmt(sv)} हर महीने · ${fmt(sv*12,0)} साल में · ${(base/opt).toFixed(1)} गुना सस्ता`):T('Tap a card to turn a hack on','कोई card tap करके hack on करो');
+ [...$('scen').options].forEach(o=>o.textContent=SCEN[o.value].label[S.lang==='hi'?1:0])}
+['hCache','hSmall','hBatch'].forEach(k=>$(k).addEventListener('click',()=>{S[k]=!S[k];hacks();save()}));
+$('scen').addEventListener('change',e=>{S.scen=e.target.value;hacks();save()});
+
+/* ---------- 5. picker ---------- */
+const P={};
+document.querySelectorAll('.picker .chips').forEach(g=>g.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;P[g.dataset.q]=b.dataset.v;g.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',String(c===b)));verdict()}));
+function verdict(){if(!(P.use&&P.q&&P.b))return;let t,p;
+ if(P.q==='yes'&&P.b==='0'){t=T('Free tiers via OmniRoute, plus free models on OpenRouter','OmniRoute से free tiers, साथ में OpenRouter के free models');p=T('With no budget and a need for top quality, pool whatever free quotas exist and accept the rate limits. When a project starts earning, move it to a paid Claude or GPT key with caching turned on.','Budget ज़ीरो और top quality चाहिए, तो जितने free quotas मिलते हैं उन्हें जोड़ो और rate limits मान लो. जब project कमाने लगे, तो caching के साथ paid Claude या GPT key पर जाओ.')}
+ else if(P.q==='yes'){t=T('Pay per token on Claude or GPT, but use the three hacks','Claude या GPT पर per-token pay करो, पर तीनों hacks लगाओ');p=T(P.use==='app'?'For a customer-facing app, quality and reliability come first. Turn on caching, route easy questions to Haiku or Luna, and batch anything that can wait. Most teams cut 60 to 90% this way.':'Caching plus a smaller model for easy tasks usually makes a paid key cheaper than you expect. Set a monthly spend limit in the provider dashboard so credits never surprise you.',P.use==='app'?'Customers वाली app में quality और reliability पहले आती है. Caching on करो, आसान सवाल Haiku या Luna को भेजो, और जो wait कर सकता है उसे batch करो. ज़्यादातर teams ऐसे 60 से 90% बचाती हैं.':'Caching और आसान कामों के लिए छोटा model, paid key को उम्मीद से सस्ता बना देता है. Provider dashboard में monthly limit set करो ताकि credits कभी surprise न करें.')}
+ else if(P.b==='0'){t=P.use==='learn'?T('Ollama on your own machine','अपनी machine पर Ollama'):T('OmniRoute','OmniRoute');p=P.use==='learn'?T('For learning, a local model costs nothing per token and teaches you how prompts, context and tokens really behave. Add Open WebUI for a chat interface.','सीखने के लिए local model का per-token खर्चा ज़ीरो है, और आप prompts, context और tokens को असल में समझते हो. Chat interface के लिए Open WebUI जोड़ो.'):T('Run OmniRoute on a laptop or a small server, add the free providers it supports, and point your coding tool at it. When one quota runs out it moves to the next.','OmniRoute को laptop या छोटे server पर चलाओ, उसमें free providers जोड़ो, और अपने coding tool को उस पर point करो. एक quota खत्म, तो अगला.')}
+ else if(P.b==='low'){t=T('CheapestInference Core or Frontier','CheapestInference Core या Frontier');p=T('For roughly ₹2,000 to ₹7,000 a month you get unlimited tokens in your daily 8-hour window on open models. Good for heavy coding or content work where credits kept running out. Choose the Asia-Pacific window.','महीने के करीब ₹2,000 से ₹7,000 में रोज़ 8 घंटे की window में open models पर unlimited tokens. Heavy coding या content काम के लिए अच्छा जहाँ credits बार-बार खत्म होते थे. Asia-Pacific window चुनो.')}
+ else{t=T('CheapestInference Flagship, or a paid key with hacks','CheapestInference Flagship, या hacks के साथ paid key');p=T('With a real budget you can either go flat-rate on the strongest open models, or keep Claude and GPT and use caching plus batching. Run the full calculator below with your own numbers before deciding.','असली budget है तो या तो सबसे strong open models पर flat-rate लो, या Claude और GPT रखो और caching plus batching लगाओ. फैसला करने से पहले नीचे पूरा calculator अपने numbers के साथ चलाओ.')}
+ $('vT').textContent=t;$('vP').textContent=p;$('verdict').hidden=false}
+
+/* ---------- 6. quiz ---------- */
+const QUIZ=[
+ {q:['A 500-word question to Claude Sonnet 5.5 costs about…','Claude Sonnet 5.5 को 500 words का सवाल भेजने का खर्चा लगभग…'],o:['₹0.13','₹1.30','₹13'],a:0,x:['500 words is about 665 tokens. At $2 per million that is $0.0013, or about 13 paise. Sending is cheap. It is the reply, the repeats and the hidden thinking that add up.','500 words यानी करीब 665 tokens. $2 per million पर $0.0013, यानी करीब 13 पैसे. भेजना सस्ता है. जवाब, repeats और छुपी thinking ही bill बढ़ाते हैं.']},
+ {q:['Same question, but the AI thinks for 3,000 tokens before replying with one word. The bill is now about…','Same सवाल, पर AI जवाब देने से पहले 3,000 tokens सोचता है और एक word में जवाब देता है. अब bill लगभग…'],o:['₹0.15','₹3','₹30'],a:1,x:['Thinking is billed as output: 3,000 × $10 per million = $0.03, about ₹2.90. That hidden thinking cost 22 times more than the question itself.','Thinking output rate पर bill होती है: 3,000 × $10 per million = $0.03, करीब ₹2.90. वो छुपी thinking सवाल से 22 गुना महँगी पड़ी.']},
+ {q:['A support bot sends a 50,000-token manual with each of 100 daily questions. With caching, the monthly bill drops from about ₹30,000 to…','एक support bot रोज़ 100 सवालों के साथ 50,000-token manual भेजता है. Caching के साथ monthly bill करीब ₹30,000 से गिरकर…'],o:['₹25,000','₹15,000','₹3,500'],a:2,x:['Cache reads cost $0.10 per million instead of $2, so the manual part shrinks by 95%. Most of the remaining bill is the replies. This is the single biggest hack for document-heavy apps.','Cache read $2 की जगह $0.10 per million पर, तो manual वाला हिस्सा 95% घट जाता है. बचा हुआ bill ज़्यादातर जवाबों का है. Document-heavy apps के लिए यही सबसे बड़ा hack है.']}];
+function quiz(){$('quiz').innerHTML=QUIZ.map((q,i)=>`<div class="qq" data-i="${i}"><div class="qt">${q.q[HIdx()]}</div><div class="opts">${q.o.map((o,j)=>`<button data-j="${j}">${o}</button>`).join('')}</div><p class="ans" hidden>${q.x[HIdx()]}</p></div>`).join('')}
+const HIdx=()=>S.lang==='hi'?1:0;
+$('quiz').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const qq=b.closest('.qq');const q=QUIZ[+qq.dataset.i];
+ qq.querySelectorAll('button').forEach((x,j)=>{x.classList.toggle('right',j===q.a);x.classList.toggle('wrong',x===b&&j!==q.a);x.disabled=true});qq.querySelector('.ans').hidden=false});
+
+/* ---------- 7. glossary ---------- */
+const GL=[
+ ['Token',['A small piece of text, roughly three quarters of an English word. Everything you send and everything the AI writes is counted in tokens.','Text का छोटा टुकड़ा, लगभग पौना English word. जो आप भेजते हो और जो AI लिखता है, सब tokens में गिना जाता है.']],
+ ['Input',['What you send: your question, pasted documents and the hidden instructions the app adds. Billed at the input price.','जो आप भेजते हो: सवाल, paste किए documents और app की छुपी instructions. Input price पर bill.']],
+ ['Output',['What the AI writes back, including any hidden thinking. Usually 5 times the input price.','जो AI वापस लिखता है, छुपी thinking समेत. आमतौर पर input price का 5 गुना.']],
+ ['Context window',['The maximum amount of text the AI can look at in one go. Long chats fill it up and some models charge more once you cross a limit.','एक बार में AI जितना text देख सकता है. लंबी chats इसे भर देती हैं, और कुछ models limit पार करने पर ज़्यादा charge करते हैं.']],
+ ['Prompt caching',['Telling the AI to remember a fixed block of text for a few minutes. Rereading it costs about 10% of normal input, or less.','AI को एक fixed text block कुछ minute याद रखने को कहना. उसे दोबारा पढ़ना normal input का करीब 10% या उससे कम.']],
+ ['Batch',['Sending work that can wait up to 24 hours. Anthropic and OpenAI both charge half for it.','ऐसा काम भेजना जो 24 घंटे wait कर सकता है. Anthropic और OpenAI दोनों आधा price लेते हैं.']],
+ ['Thinking',['Some models reason privately before answering. You never see those tokens, but you pay for them at the output price.','कुछ models जवाब से पहले अकेले में सोचते हैं. वो tokens आपको दिखते नहीं, पर output price पर pay करते हो.']],
+ ['Rate limit',['A cap on how many requests or tokens you may send per minute or per day. Free tiers have tight ones.','हर minute या दिन में कितनी requests या tokens भेज सकते हो, उसकी सीमा. Free tiers की limits tight होती हैं.']],
+ ['Credits',['Prepaid balance on a provider account. Every request deducts from it. When it hits zero, requests fail until you top up.','Provider account पर prepaid balance. हर request उसमें से कटती है. ज़ीरो होने पर top-up तक requests fail.']],
+ ['Gateway / router',['A middle layer that gives you one endpoint and sends each request to the cheapest or available model behind it. OmniRoute and OpenRouter are examples.','एक बीच की layer जो आपको एक endpoint देती है और हर request को पीछे के सबसे सस्ते या available model पर भेजती है. OmniRoute और OpenRouter इसके examples हैं.']]];
+function gloss(){$('gloss').innerHTML=GL.map(([t,d],i)=>`<button class="gl" aria-expanded="false" data-i="${i}"><b>${t}</b><span>${d[HIdx()]}</span></button>`).join('')}
+$('gloss').addEventListener('click',e=>{const b=e.target.closest('.gl');if(!b)return;b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true'))});
+
+/* ---------- advanced calculator (unchanged maths) ---------- */
+function rates(m,promptLen){return (m.long&&promptLen>m.long.at)?m.long:m}
+function chatCost(c,m){
+ const Tn=Math.max(1,Math.round(c.turns)), U=c.usr, O=c.out*(c.short?1-c.cut/100:1), K=c.think*(c.lowthink?1-c.tcut/100:1);
+ const gap=1440/Math.max(1,c.convs); const warm=c.cache?1-Math.exp(-c.ttl/gap):0;
+ let p={fresh:0,hist:0,cache:0,out:0,think:0};
+ for(let i=1;i<=Tn;i++){
+  const prior=c.trim?Math.min(i-1,c.keep):(i-1);const H=prior*(U+O);const r=rates(m,c.sys+U+H);const w=c.ttl==60?r.w60:r.w5;
+  if(c.cache){p.cache+= i==1 ? c.sys*(warm*r.rd+(1-warm)*w)/1e6 : c.sys*r.rd/1e6;
+   if(c.cacheHist&&!c.trim){const old=Math.max(0,i-2)*(U+O), newest=i>=2?(U+O):0;p.cache+=(old*r.rd+newest*w)/1e6; p.fresh+=U*r.in/1e6;}
+   else{ p.hist+=H*r.in/1e6; p.fresh+=U*r.in/1e6; }
+  }else{ p.fresh+=(c.sys+U)*r.in/1e6; p.hist+=H*r.in/1e6; }
+  p.out+=O*r.out/1e6; p.think+=K*r.out/1e6;}
+ if(c.batch){const f=1-c.bshare/100*.5;for(const k in p)p[k]*=f}
+ p.total=p.fresh+p.hist+p.cache+p.out+p.think; return p;}
+const month=(c,m)=>{const p=chatCost(c,m);const k=c.convs*30;const o={};for(const x in p)o[x]=p[x]*k;return o};
+function base(){return {...S,cache:false,cacheHist:false,trim:false,batch:false,short:false,lowthink:false}}
+function bar(el,p,max){const segs=[['fresh','--in'],['hist','--hist'],['cache','--cache'],['out','--out'],['think','--think']];
+ el.innerHTML=segs.map(([k,c])=>`<span title="${k}" style="width:${max?p[k]/max*100:0}%;background:var(${c})"></span>`).join('')}
+function render(){
+ const now=month(base(),M[S.model]); const opt=month(S,M[S.model2]);
+ const saved=now.total-opt.total, pct=now.total?saved/now.total*100:0;
+ $('sNow').textContent=fmt(now.total);$('sNowS').textContent=`${M[S.model].name} · ${fmt(now.total/(S.convs*30))} per chat`;
+ $('sOpt').textContent=fmt(opt.total);$('sOptS').textContent=`${M[S.model2].name} · ${fmt(opt.total/(S.convs*30))} per chat`;
+ $('sSave').textContent=saved>0?`${pct.toFixed(0)}%`:'0%';$('sSaveS').textContent=saved>0?`${fmt(saved)} per month · ${fmt(saved*12,0)} per year`:'Turn on a lever to see savings';
+ const max=Math.max(now.total,opt.total);bar($('bNow'),now,max);bar($('bOpt'),opt,max);
+ $('aNow').textContent=fmt(now.total);$('aOpt').textContent=fmt(opt.total);
+ const parts=[['fixed instructions and new messages',now.fresh],['re-sent chat history',now.hist],['replies',now.out],['thinking',now.think]].sort((a,b)=>b[1]-a[1]);
+ $('insight').textContent=`Right now ${(parts[0][1]/now.total*100).toFixed(0)}% of your bill is ${parts[0][0]}. ${parts[0][0].startsWith('fixed')?'Prompt caching targets exactly this.':parts[0][0].startsWith('re-sent')?'Trimming or caching chat history targets this.':parts[0][0]==='replies'?'Shorter replies or a smaller model help most here.':'A lower thinking budget helps most here.'}`;
+ const b=base(), bm=M[S.model];const bt=month(b,bm).total;
+ const L=[
+  {k:'cache',t:'Turn on prompt caching',d:`Your ${nf(S.sys)} fixed tokens are read from cache at ${fmt(bm.rd,2)} per 1M instead of ${fmt(bm.in,2)}.`,c:{cache:true,ttl:S.convs>=288?5:60}},
+  {k:'cacheHist',t:'Cache the chat history too',d:'Older messages in each chat are read from cache instead of being paid in full again.',c:{cache:true,cacheHist:true,ttl:S.convs>=288?5:60}},
+  {k:'trim',t:`Keep only the last ${S.keep} messages`,d:'Long chats stop growing the bill. Summarize older turns in one line.',c:{trim:true}},
+  {k:'batch',t:`Batch ${S.bshare}% of requests`,d:'Anything that can wait up to 24 hours costs half.',c:{batch:true}},
+  {k:'short',t:`Shorten replies by ${S.cut}%`,d:'Replies are billed at the output price, 5× input.',c:{short:true}},
+  {k:'lowthink',t:`Cut thinking by ${S.tcut}%`,d:'Reasoning tokens are billed as output even though you never see them.',c:{lowthink:true}},
+ ];
+ if(DOWN[S.model])L.push({k:'model',t:`Try ${M[DOWN[S.model]].name}`,d:'Same workload on the next smaller model. Test quality first.',m:DOWN[S.model]});
+ const recs=L.map(l=>{const c={...b,...(l.c||{})};const t=month(c,l.m?M[l.m]:bm).total;return {...l,save:bt-t}}).filter(r=>r.save>0.0001).sort((a,b)=>b.save-a.save);
+ window._recs=recs;
+ $('recs').innerHTML=recs.map(r=>{const on=r.m?S.model2===r.m:S[r.k]&&(r.k!=='cacheHist'||S.cache);
+  return `<div class="rec ${on?'done':''}"><div><h3>${r.t}${on?'<span class="pill">ON</span>':''}</h3><p>${r.d}</p></div><div class="gain">−${fmt(r.save)}<small>${(r.save/bt*100).toFixed(0)}% / month</small></div></div>`}).join('')||'<p class="note">Your workload is already lean.</p>';
+ $('mt').innerHTML=MODELS.map(m=>({m,t:month(S,m).total})).map(({m,t},_,arr)=>{const best=t===Math.min(...arr.map(a=>a.t));
+  return `<tr class="${best?'best':''} ${m.id===S.model2?'sel':''}"><td><b>${m.name}</b><span class="vendor">${m.v}</span></td><td class="num mono">${fmt(m.in,2)}</td><td class="num mono">${fmt(m.out,2)}</td><td class="num mono">${fmt(m.rd,2)}</td><td class="num mono"><b>${fmt(t)}</b></td></tr>`}).join('');
+}
+const opts=MODELS.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+['model','model2','estModel'].forEach(id=>$(id).innerHTML=opts);
+$('presets').innerHTML=Object.entries(PRESETS).map(([k,p])=>`<button class="chip" data-p="${k}" aria-pressed="false">${p.label}</button>`).join('');
+const NUM=['sys','usr','out','think','turns','convs'];
+function sync(){
+ NUM.forEach(k=>$(k).value=S[k]);['model','model2'].forEach(k=>$(k).value=S[k]);$('estModel').value=S.estModel;
+ ['cache','cacheHist','trim','batch','short','lowthink'].forEach(k=>$(k).checked=S[k]);
+ $('ttl').value=S.ttl;$('keep').value=S.keep;$('bshare').value=S.bshare;$('cut').value=S.cut;$('tcut').value=S.tcut;
+ $('keepV').textContent=S.keep+' messages';$('bshareV').textContent=S.bshare+'%';$('cutV').textContent=S.cut+'%';$('tcutV').textContent=S.tcut+'%';
+ $('cacheOpts').hidden=!S.cache;$('trimOpts').hidden=!S.trim;$('batchOpts').hidden=!S.batch;$('shortOpts').hidden=!S.short;$('thinkOpts').hidden=!S.lowthink;
+ document.querySelectorAll('#presets .chip').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.p===S.preset)));
+ $('cUSD').setAttribute('aria-pressed',String(S.cur==='USD'));$('cINR').setAttribute('aria-pressed',String(S.cur==='INR'));$('fx').value=S.fx;
+ $('wIn').value=S.wIn;$('wOut').value=S.wOut;$('wThink').checked=S.wThink;$('nMsg').value=S.nMsg;$('scen').value=S.scen;
+ renderAll();save();}
+function renderAll(){est();meter();chats();hacks();quiz();gloss();render()}
+NUM.forEach(k=>$(k).addEventListener('input',e=>{const v=parseFloat(e.target.value);S[k]=isNaN(v)?0:Math.max(k==='turns'||k==='convs'?1:0,v);S.preset='';render();save();document.querySelectorAll('#presets .chip').forEach(c=>c.setAttribute('aria-pressed','false'))}));
+$('model').addEventListener('change',e=>{const was=S.model;S.model=e.target.value;if(S.model2===was)S.model2=S.model;sync()});
+$('model2').addEventListener('change',e=>{S.model2=e.target.value;sync()});
+['cache','cacheHist','trim','batch','short','lowthink'].forEach(k=>$(k).addEventListener('change',e=>{S[k]=e.target.checked;if(k==='cacheHist'&&S.cacheHist)S.cache=true;if(k==='cache'&&!S.cache)S.cacheHist=false;sync()}));
+$('ttl').addEventListener('change',e=>{S.ttl=+e.target.value;sync()});
+['keep','bshare','cut','tcut'].forEach(k=>$(k).addEventListener('input',e=>{S[k]=+e.target.value;sync()}));
+$('presets').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const p=PRESETS[b.dataset.p];Object.assign(S,{preset:b.dataset.p,model:p.model,model2:p.model,sys:p.sys,usr:p.usr,out:p.out,think:p.think,turns:p.turns,convs:p.convs});sync()});
+$('cUSD').addEventListener('click',()=>{S.cur='USD';sync()});$('cINR').addEventListener('click',()=>{S.cur='INR';sync()});
+$('fx').addEventListener('input',e=>{const v=parseFloat(e.target.value);if(v>0){S.fx=v;renderAll();save()}});
+$('applyAll').addEventListener('click',()=>{(window._recs||[]).slice(0,3).forEach(r=>{if(r.m)S.model2=r.m;else Object.assign(S,r.c)});sync()});
+$('copyMail').addEventListener('click',async e=>{try{await navigator.clipboard.writeText('contact@codebiosis.com');e.target.textContent=T('Copied','Copy हो गया')}catch(err){const r=document.createRange();r.selectNodeContents(document.querySelector('.cta code'));const s=getSelection();s.removeAllRanges();s.addRange(r);e.target.textContent=T('Selected, press copy','Select हो गया, copy दबाओ')}});
+applyLang();sync();
+</script>
+</body>
+</html>
